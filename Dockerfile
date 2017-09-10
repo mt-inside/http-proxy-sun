@@ -10,3 +10,7 @@ RUN cd /var/log/nginx && \
     mkdir $(ls /etc/nginx/sites-enabled)
 
 RUN mkdir -p /spool/nginx/cache
+
+
+COPY cmd.sh /
+CMD /cmd.sh
