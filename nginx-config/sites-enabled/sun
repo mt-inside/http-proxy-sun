@@ -25,13 +25,6 @@ server {
                  try_files $uri $uri/ =404;
          }
 
-        # trailing / is significant - means redirect /phpsysinfo to /phpsysinfo/
-        location /phpsysinfo/ {
-                include proxy_params;
-                # trailing / is significant - causes the location prefix matched to be dropped
-                proxy_pass http://phpsysinfo/;
-        }
-
 
         # === PLEX ===
         # NB: plex is a single-page app that lives under /web/index.html, returns 404s for all other URIs except /, which it knows how to bootstrap itself from. This bootstrapping is nasty in that you get a response with code 401 but a body containing JavaScript that does a browser redirect (manipulating window.location)
@@ -105,5 +98,37 @@ server {
         location /httpbin/ {
                 include proxy_params;
                 proxy_pass http://httpbin:8000/;
+        }
+
+        # trailing / is significant - means redirect /phpsysinfo to /phpsysinfo/
+        # NB: have to pass everything to fastcgi, not just PHP, becuase
+        # it's on another machine so this nginx can't read that filesystem.
+        # Alas php-fpm applies a blanket text/html mime, so styles etc
+        # don't work. Could maybe fix fpm but actually this is nasty - this
+        # machine has to know where on the disk the other machine stores
+        # its files. Seems fpm is too basic to serve a web app; it's just a
+        # cgi process manager. Need an nginx or something on the other end
+        # (like unit is).
+        location /phpsysinfo/ {
+                include proxy_params;
+                # Trailing / causes matched prefix (/phpsysinfo) to be
+                # dropped, as that's all the host's nginx serves for now.
+                # In future it might have to serve more apps, but the idea
+                # is one nginx (ideallly, unit) per app
+                proxy_pass http://host:40001/;
+
+                ## This will pass directly to php-fpm, which works for
+                #interpreting and serving php and does hoof the static
+                #files (css, js, etc) off the disk, but doesn't set their
+                #mimetype (and is presubaly very slow etc). Really needs a
+                #real http server infront of it (one with access to that
+                #host's fs to be able to serve the static stuff).
+                #nginx-unit does this but isn't available for gentoo.
+                ###root /var/www/localhost/htdocs/;
+                ##### this is the upstream fastcgi_params with one extra var to set the script file to the above root plus the Target Resource
+                ###include fastcgi.conf;
+                ###fastcgi_index index.php;
+                #### missing trailing / is significant - causes the location prefix matched not to be dropped
+                ###fastcgi_pass host:9000;
         }
 }
