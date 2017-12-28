@@ -2,15 +2,17 @@
 # Debian 9
 FROM nginx:1.13
 
-COPY nginx-config/ /etc/nginx/
+RUN mkdir -p /spool/nginx/cache
 
-COPY htdocs/ /usr/share/nginx/html/
+COPY nginx-config/ /etc/nginx/
 
 RUN cd /var/log/nginx && \
     mkdir $(ls /etc/nginx/sites-enabled)
 
-RUN mkdir -p /spool/nginx/cache
+
+# Static HTML content (pending migration to a default-backend container)
+COPY htdocs/ /usr/share/nginx/html/
 
 
-COPY cmd.sh /
-CMD /cmd.sh
+# This differs from the parent image's CMD in that e.g. it lacks a daemon flag
+CMD ["nginx"]
