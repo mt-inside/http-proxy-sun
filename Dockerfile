@@ -13,6 +13,9 @@ RUN cd /var/log/nginx && \
 # Static HTML content (pending migration to a default-backend container)
 COPY htdocs/ /usr/share/nginx/html/
 
+# Cert input
+VOLUME /etc/letsencrypt
+
 
 # This differs from the parent image's CMD in that e.g. it lacks a daemon flag
 CMD ["nginx"]

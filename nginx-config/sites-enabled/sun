@@ -8,10 +8,21 @@ server {
 }
 
 server {
-        listen 80 default_server;
-        listen [::]:80 default_server;
+        listen 443 ssl http2 default_server;
+        listen [::]:443 ipv6only=on ssl http2 default_server;
 
-        server_name sun sun.workgroup;
+        # This isn't just the name returned, it's the vhost i.e. host header match
+        # Note that server_names_hash_bucket_size has been increased
+        server_name sun sun.empty.org.uk;
+
+
+        # TLS Certs
+        include /etc/nginx/options-ssl-nginx.conf;
+        # Fetched by certbot before nginx starts
+        ssl_certificate /etc/letsencrypt/live/sun.empty.org.uk/fullchain.pem; # all certs including end-entity
+        ssl_certificate_key /etc/letsencrypt/live/sun.empty.org.uk/privkey.pem; # private key
+        # for OCSP stapling
+        ssl_trusted_certificate /etc/letsencrypt/live/sun.empty.org.uk/chain.pem; # chain, minus end-entity
 
 
         location / {
