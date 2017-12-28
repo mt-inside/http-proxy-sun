@@ -1,13 +1,13 @@
 # SEE JOEL fb mesage plex.warwick.film config
 #
 server {
+        # Listen on both http and httpS. No auto-upgrade, as there are some
+        # legitimate uses for non-TLS (e.g. plex streaming). TLS isn't the
+        # be-all and end-all of security; this couldn't be exposed to the
+        # internet anyway, TLS or not, as there's no HTTP auth over
+        # sensitive information
         listen 80;
         listen [::]:80 ipv6only=on;
-        server_name _;
-        return 301 https://$host$request_uri;
-}
-
-server {
         listen 443 ssl http2 default_server;
         listen [::]:443 ipv6only=on ssl http2 default_server;
 
