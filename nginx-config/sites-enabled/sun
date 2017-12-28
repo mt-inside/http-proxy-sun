@@ -37,81 +37,21 @@ server {
                 # First attempt to serve request as file, then
                 # as directory, then fall back to displaying a 404.
                 try_files $uri $uri/ =404;
-         }
-
-
-        # === PLEX ===
-        # NB: plex is a single-page app that lives under /web/index.html, returns 404s for all other URIs except /, which it knows how to bootstrap itself from. This bootstrapping is nasty in that you get a response with code 401 but a body containing JavaScript that does a browser redirect (manipulating window.location)
-        # Three steps:
-        # 1. "redirect": re-write request URI to drop the /plex prefix - standard vhosting
-        # 2. proxy pass the request (with new URI) to plex process
-        # 3. "bootstrap": if accessing /, page is served with JS that redirects
-
-        # NB: This works when you're reverse-proxying plex, even if your
-        # access to the reverse proxy is over an ssh tunnel (i.e.
-        # addressing the proxy as neither the host nor port it knows
-        # about). However, even this only seems to work when plex is on
-        # the same machine (or host-net container) as the proxy
-
-        # OPTION ONE
-        # This basically takes the /plex bootstrap special case and throws it back at the other rules
-        # nginx location /plex/ { proxy_pass ... } should do the following, but drops any port number in the host, so we write it out manually.
-        # Could combine redirect and bootstrap here, so that by the time the proxy_pass kicks in, plex doesn't need to serve the bootstrap code. However I find it neater to just throw this request back round the loop in its cannonical form, and let the JavaScript be part of both bootstrapping paths
-        rewrite ^/plex$ $scheme://$http_host/plex/;
-        location /plex/ {
-                #proxy_pass http://plex:32400/;
-                proxy_pass http://172.18.0.1:32400/;
-        }
-        # if plex requests anything...  (plex's single-page app that is, good to have th referer match that specific, qv)
-        if ($http_referer ~* /plex/web/index.html) { # case-insensitive regex match
-                set $test A;
         }
 
-        # OPTION TWO
-        # 2.1.A works
-#                location /plex/ {
-#                        proxy_pass http://localhost:32400/;
-#                }
-        # 2.1.B Can't do this because it catches the requeses for assets under here too
-#                location /plex/ {
-#                        proxy_pass http://localhost:32400/web/index.html;
-#                }
-        # 2.2.A) Combines the redirect and the proxy pass, so plex gets a request for / and serves the bootstrap redirect code. This code is broken, strips off the "filename" (plex), and thus redirects to /web/index.html. However, at that point the *browser's* location is /plex, so the if (referer) below catches it and fixes it up.
-#                location = /plex {
-#                        rewrite /plex / break;
-#                        proxy_pass http://localhost:32400;
-#                }
-        # 2.2.B) Combines the redirect, the proxy pass, and skips plex's dodgy bootstrap redirection code, so the bootstrap code is never served. Thus the *browser* is never redirected and because plex is a single-page app, always thinks the URI is /plex[?query].
-#                location = /plex {
-#                        proxy_pass http://localhost:32400/web/index.html;
-#                }
-        # if plex requests anything...
-        # Morally should match ^/plex but the referrer has http://<arbitrary host> on the front and I don't know of a way of extracting just the path.
-        # For both of these configs this has to be /plex, rather than the more specific real location of the single-page app (/plex/web/index.html). For 2.2.A this is because the bootstrap code makes the browser redirect thinks its location is /plex when it does it (becuase the redirect and proxy_pass are combined). For 2.2.B this is becuase redirect, proxy_pass and bootstrap are all combined, so the referer is always /plex, even when the app-proper is requesting resources. This is morally right - plex may add other pages in the future, and anything from plex should be caught by this rule. However, because we can't match the /start/ of the path only, because of the URI scheme, this necessarily matches any URI /containing/ plex, which could break other vhosts, ergo matching the single-page app specifically is more pragmatic.
-#                if ($http_referer ~* /plex) { # case-insensitive regex match
-#                        set $test A;
-#                }
 
-        # AND
-        # ...that's not under /plex...
-        if ($uri !~ ^/plex/) {
-                set $test "${test}B";
-        }
-        # ...stick plex back in.
-        if ($test = AB) {
-                return 301 $scheme://$http_host/plex$uri$is_args/$args;
-        }
+        include /etc/nginx/locations-enabled/plex;
 
+
+        location /httpbin/ {
+                include proxy_params;
+                proxy_pass http://httpbin:8000/;
+        }
 
         location /sysstats/ {
                 include uwsgi_params;
                 uwsgi_param SCRIPT_NAME /sysstats;
                 uwsgi_pass sysstats_frontend:3031;
-        }
-
-        location /httpbin/ {
-                include proxy_params;
-                proxy_pass http://httpbin:8000/;
         }
 
         # trailing / is significant - means redirect /phpsysinfo to /phpsysinfo/
