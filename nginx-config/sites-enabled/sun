@@ -25,9 +25,12 @@ server {
         ssl_trusted_certificate /etc/letsencrypt/live/sun.empty.org.uk/chain.pem; # chain, minus end-entity
 
 
-        location / {
-                auth_basic off;
+        # No password protection (auth_basic etc). It's just too much
+        # effort for e.g. Plex that does a bunch of dynamic loading.
+        # DO NOT EXPOSE THIS TO THE INTERNET!
 
+
+        location / {
                 root /usr/share/nginx/html;
                 index index.html index.htm;
 
