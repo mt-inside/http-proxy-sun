@@ -55,6 +55,12 @@ server {
         }
 
         # trailing / is significant - means redirect /phpsysinfo to /phpsysinfo/
+        # phpsysinfo (the php bit) has to run on the host machine - even
+        # sharing as many namespaces as docker allows isn't quite the same.
+        # Gentoo doesn't have an nginx-unit ebuild yet, so we use nginx
+        # proper on the host, which has one site/location - :40001 running
+        # phpsysinfo (see below), which in turn fast_cgi passes to
+        # host:9000 where php-fpm is listening to actually run the PHP.
         # NB: have to pass everything to fastcgi, not just PHP, becuase
         # it's on another machine so this nginx can't read that filesystem.
         # Alas php-fpm applies a blanket text/html mime, so styles etc
