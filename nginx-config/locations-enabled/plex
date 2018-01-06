@@ -17,7 +17,7 @@
 rewrite ^/plex$ $scheme://$http_host/plex/;
 location /plex/ {
         #proxy_pass http://plex:32400/;
-        proxy_pass http://172.18.0.1:32400/;
+        proxy_pass http://host:32400/;
 }
 # if plex requests anything...  (plex's single-page app that is, good to have th referer match that specific, qv)
 if ($http_referer ~* /plex/web/index.html) { # case-insensitive regex match
